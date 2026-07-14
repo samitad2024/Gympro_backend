@@ -13,6 +13,7 @@ import servicesRoutes from "@modules/services/services.routes";
 import contentRoutes from "@modules/content/content.routes";
 import notificationsRoutes from "@modules/notifications/notifications.routes";
 import reportsRoutes from "@modules/reports/reports.routes";
+import authRoutes from "@modules/auth/auth.routes";
 
 export const app = express();
 
@@ -30,6 +31,7 @@ app.use("/api/services", servicesRoutes);
 app.use("/api/content", contentRoutes);
 app.use("/api/notifications", notificationsRoutes);
 app.use("/api/reports", reportsRoutes);
+app.use("/api/auth", authRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
