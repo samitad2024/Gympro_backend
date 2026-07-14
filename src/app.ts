@@ -18,6 +18,9 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 import plansRoutes from "@modules/plans/plans.routes";
 
 app.use("/api/plans", plansRoutes);
+import membersRoutes from "@modules/members/members.routes";
+
+app.use("/api/members", membersRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
