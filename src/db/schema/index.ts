@@ -5,3 +5,4 @@ export * from "./expenses.schema";
 export * from "./services.schema";
 export * from "./content.schema";
 export * from "./notifications.schema";
+export * from "./owners.schema";
