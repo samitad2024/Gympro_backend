@@ -61,8 +61,11 @@ router.get(
  *             properties:
  *               name:
  *                 type: string
+ *                 example: "Monthly Plan"
  *               durationDays:
  *                 type: integer
+ *                 minimum: 1
+ *                 example: 30
  *               price:
  *                 type: string
  *                 example: "500.00"

@@ -85,12 +85,17 @@ router.get(
  *             properties:
  *               name:
  *                 type: string
+ *                 example: "John Doe"
  *               phone:
  *                 type: string
+ *                 example: "0912345678"
  *               planId:
  *                 type: integer
+ *                 minimum: 1
+ *                 example: 1
  *               fcmToken:
  *                 type: string
+ *                 example: ""
  *     responses:
  *       201:
  *         description: Member registered with pending status
