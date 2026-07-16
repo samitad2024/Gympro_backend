@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { ZodSchema } from "zod";
+import { ZodError, ZodSchema } from "zod";
 import { AppError } from "@utils/app-error";
 
 type RequestSchemas = {
@@ -7,6 +7,27 @@ type RequestSchemas = {
   params?: ZodSchema;
   query?: ZodSchema;
 };
+
+function stripEmptyQuery(query: Request["query"]) {
+  const cleaned: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== "" && value !== undefined) {
+      cleaned[key] = value;
+    }
+  }
+  return cleaned;
+}
+
+function applyParsedQuery(
+  req: Request,
+  parsed: Record<string, unknown>
+) {
+  const query = req.query as Record<string, unknown>;
+  for (const key of Object.keys(query)) {
+    delete query[key];
+  }
+  Object.assign(query, parsed);
+}
 
 export function validateRequest(schemas: RequestSchemas) {
   return (req: Request, _res: Response, next: NextFunction) => {
@@ -18,11 +39,16 @@ export function validateRequest(schemas: RequestSchemas) {
         req.params = schemas.params.parse(req.params) as Request["params"];
       }
       if (schemas.query) {
-        req.query = schemas.query.parse(req.query) as Request["query"];
+        const parsed = schemas.query.parse(
+          stripEmptyQuery(req.query)
+        ) as Record<string, unknown>;
+        applyParsedQuery(req, parsed);
       }
       next();
     } catch (error) {
-      next(new AppError("Validation failed", 400, error));
+      const details =
+        error instanceof ZodError ? error.flatten() : error;
+      next(new AppError("Validation failed", 400, details));
     }
   };
 }
