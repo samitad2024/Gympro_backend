@@ -13,11 +13,8 @@
     "resolveJsonModule": true,
     "baseUrl": "src",
     "paths": {
-      "@config/*": ["config/*"],
-      "@modules/*": ["modules/*"],
-      "@middleware/*": ["middleware/*"],
-      "@utils/*": ["utils/*"],
-      "@db/*": ["db/*"]
+      "@core/*": ["core/*"],
+      "@modules/*": ["modules/*"]
     }
   },
   "include": ["src"],

@@ -1,6 +1,6 @@
 import { app } from "./app";
-import { env } from "@config/env";
-import { ensureOwnerExists } from "@modules/auth/auth.service";
+import { env } from "@core/config/env";
+import { ensureOwnerExists } from "@modules/auth/application/auth.service";
 
 async function start() {
   await ensureOwnerExists();
