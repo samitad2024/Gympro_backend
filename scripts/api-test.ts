@@ -237,8 +237,8 @@ async function run() {
   // ── Auth ───────────────────────────────────────────────
   console.log("── Auth ──");
   r = await req("POST", "/api/auth/owner/login", {
-    email: process.env.OWNER_EMAIL ?? "owner@gympro.local",
-    password: process.env.OWNER_PASSWORD ?? "changeme",
+    email: process.env.OWNER_EMAIL ?? "admin@gmail.com",
+    password: process.env.OWNER_PASSWORD ?? "admin123",
   });
   assert("POST /api/auth/owner/login", r.status === 200 && !!(r.json.data as { token?: string })?.token);
 

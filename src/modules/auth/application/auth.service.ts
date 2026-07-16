@@ -10,11 +10,23 @@ import {
 } from "../domain/auth.types";
 
 export async function ensureOwnerExists() {
-  const existing = await authRepo.findOwnerByEmail(env.OWNER_EMAIL);
-  if (existing) {
-    return existing;
-  }
   const passwordHash = await bcrypt.hash(env.OWNER_PASSWORD, 10);
+  const existing = await authRepo.findOwnerByEmail(env.OWNER_EMAIL);
+
+  if (existing) {
+    return authRepo.updateOwner(existing.id, env.OWNER_EMAIL, passwordHash);
+  }
+
+  // Single-gym pilot: migrate legacy owner row to current env credentials
+  const legacyOwner = await authRepo.findAnyOwner();
+  if (legacyOwner) {
+    return authRepo.updateOwner(
+      legacyOwner.id,
+      env.OWNER_EMAIL,
+      passwordHash
+    );
+  }
+
   return authRepo.createOwner(env.OWNER_EMAIL, passwordHash);
 }
 
