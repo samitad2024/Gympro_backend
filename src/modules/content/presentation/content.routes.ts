@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireOwnerAuth } from "@core/middleware/require-owner-auth";
 import { validateRequest } from "@core/middleware/validate-request";
 import {
   contentIdParamSchema,
@@ -93,6 +94,7 @@ router.get(
  */
 router.post(
   "/",
+  requireOwnerAuth,
   validateRequest({ body: createContentSchema }),
   contentController.createContent
 );
@@ -115,6 +117,7 @@ router.post(
  */
 router.put(
   "/:id",
+  requireOwnerAuth,
   validateRequest({ params: contentIdParamSchema, body: updateContentSchema }),
   contentController.updateContent
 );
@@ -137,6 +140,7 @@ router.put(
  */
 router.delete(
   "/:id",
+  requireOwnerAuth,
   validateRequest({ params: contentIdParamSchema }),
   contentController.deleteContent
 );

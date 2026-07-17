@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireOwnerAuth } from "@core/middleware/require-owner-auth";
 import { validateRequest } from "@core/middleware/validate-request";
 import {
   createServiceSchema,
@@ -79,6 +80,7 @@ router.get(
  */
 router.post(
   "/",
+  requireOwnerAuth,
   validateRequest({ body: createServiceSchema }),
   servicesController.createService
 );
@@ -101,6 +103,7 @@ router.post(
  */
 router.put(
   "/:id",
+  requireOwnerAuth,
   validateRequest({ params: serviceIdParamSchema, body: updateServiceSchema }),
   servicesController.updateService
 );
@@ -123,6 +126,7 @@ router.put(
  */
 router.delete(
   "/:id",
+  requireOwnerAuth,
   validateRequest({ params: serviceIdParamSchema }),
   servicesController.deleteService
 );

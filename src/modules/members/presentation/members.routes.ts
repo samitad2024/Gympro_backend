@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireOwnerAuth } from "@core/middleware/require-owner-auth";
 import { validateRequest } from "@core/middleware/validate-request";
 import {
   confirmMemberSchema,
@@ -29,6 +30,7 @@ const router = Router();
  */
 router.get(
   "/",
+  requireOwnerAuth,
   validateRequest({ query: listMembersQuerySchema }),
   membersController.listMembers
 );
@@ -43,7 +45,7 @@ router.get(
  *       200:
  *         description: Pending members queue
  */
-router.get("/pending", membersController.listPendingMembers);
+router.get("/pending", requireOwnerAuth, membersController.listPendingMembers);
 
 /**
  * @openapi
@@ -65,6 +67,7 @@ router.get("/pending", membersController.listPendingMembers);
  */
 router.get(
   "/:id",
+  requireOwnerAuth,
   validateRequest({ params: memberIdParamSchema }),
   membersController.getMember
 );
@@ -139,6 +142,7 @@ router.post(
  */
 router.put(
   "/:id",
+  requireOwnerAuth,
   validateRequest({ params: memberIdParamSchema, body: updateMemberSchema }),
   membersController.updateMember
 );
@@ -175,6 +179,7 @@ router.put(
  */
 router.patch(
   "/:id/confirm",
+  requireOwnerAuth,
   validateRequest({ params: memberIdParamSchema, body: confirmMemberSchema }),
   membersController.confirmMember
 );
@@ -197,6 +202,7 @@ router.patch(
  */
 router.delete(
   "/:id",
+  requireOwnerAuth,
   validateRequest({ params: memberIdParamSchema }),
   membersController.deleteMember
 );

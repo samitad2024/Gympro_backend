@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireOwnerAuth } from "@core/middleware/require-owner-auth";
 import { validateRequest } from "@core/middleware/validate-request";
 import {
   createPlanSchema,
@@ -75,6 +76,7 @@ router.get(
  */
 router.post(
   "/",
+  requireOwnerAuth,
   validateRequest({ body: createPlanSchema }),
   plansController.createPlan
 );
@@ -112,6 +114,7 @@ router.post(
  */
 router.put(
   "/:id",
+  requireOwnerAuth,
   validateRequest({ params: planIdParamSchema, body: updatePlanSchema }),
   plansController.updatePlan
 );
@@ -136,6 +139,7 @@ router.put(
  */
 router.delete(
   "/:id",
+  requireOwnerAuth,
   validateRequest({ params: planIdParamSchema }),
   plansController.deletePlan
 );
