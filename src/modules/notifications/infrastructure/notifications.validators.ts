@@ -1,9 +1,10 @@
 import { z } from "zod";
+import { isoDateTimeSchema } from "@core/utils/validators";
 
 export const createNotificationSchema = z.object({
   title: z.string().min(1).max(200),
   body: z.string().min(1).max(500),
-  scheduledAt: z.string().datetime(),
+  scheduledAt: isoDateTimeSchema,
   isActive: z.boolean().optional(),
 });
 
