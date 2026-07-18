@@ -1,4 +1,5 @@
 import { AppError } from "@core/errors/app-error";
+import { findPlanById } from "@modules/plans/infrastructure/plans.repository";
 import * as membersRepo from "../infrastructure/members.repository";
 import {
   ConfirmMemberInput,
@@ -27,10 +28,35 @@ export async function createMember(input: CreateMemberInput) {
   if (existing) {
     throw new AppError("A member with this phone number already exists", 409);
   }
+
+  const plan = await findPlanById(input.planId);
+  if (!plan) {
+    throw new AppError("Plan not found", 404);
+  }
+
   return membersRepo.createMember(input);
 }
 
 export async function updateMember(id: number, input: UpdateMemberInput) {
+  const current = await membersRepo.findMemberById(id);
+  if (!current) {
+    throw new AppError("Member not found", 404);
+  }
+
+  if (input.phone && input.phone !== current.phone) {
+    const existing = await membersRepo.findMemberByPhone(input.phone);
+    if (existing) {
+      throw new AppError("A member with this phone number already exists", 409);
+    }
+  }
+
+  if (input.planId !== undefined) {
+    const plan = await findPlanById(input.planId);
+    if (!plan) {
+      throw new AppError("Plan not found", 404);
+    }
+  }
+
   const member = await membersRepo.updateMember(id, input);
   if (!member) {
     throw new AppError("Member not found", 404);
@@ -74,4 +100,8 @@ export async function confirmMember(id: number, input: ConfirmMemberInput) {
       400
     );
   }
+}
+
+export async function expireMembers() {
+  return membersRepo.expireActiveMembers();
 }

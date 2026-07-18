@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, lt, sql } from "drizzle-orm";
 import { db } from "@core/database/client";
 import { members, plans, payments } from "@core/database/schema";
 import { NewMember } from "../domain/members.types";
@@ -32,6 +32,23 @@ export async function findMemberByPhone(phone: string) {
   return member ?? null;
 }
 
+export async function countMembersByPlanId(planId: number) {
+  const [result] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(members)
+    .where(eq(members.planId, planId));
+  return result?.count ?? 0;
+}
+
+export async function expireActiveMembers() {
+  const now = new Date();
+  return db
+    .update(members)
+    .set({ status: "expired" })
+    .where(and(eq(members.status, "active"), lt(members.endDate, now)))
+    .returning({ id: members.id });
+}
+
 export async function createMember(data: NewMember) {
   const [member] = await db
     .insert(members)
@@ -50,8 +67,16 @@ export async function updateMember(id: number, data: Partial<NewMember>) {
 }
 
 export async function deleteMember(id: number) {
-  const [member] = await db.delete(members).where(eq(members.id, id)).returning();
-  return member ?? null;
+  return db.transaction(async (tx) => {
+    await tx.delete(payments).where(eq(payments.memberId, id));
+
+    const [member] = await tx
+      .delete(members)
+      .where(eq(members.id, id))
+      .returning();
+
+    return member ?? null;
+  });
 }
 
 export async function confirmMemberTx(
