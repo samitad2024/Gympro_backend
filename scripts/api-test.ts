@@ -13,15 +13,25 @@ type Result = { name: string; ok: boolean; detail?: string };
 
 const results: Result[] = [];
 const ids: Record<string, number> = {};
+let ownerToken = "";
 
 async function req(
   method: string,
   path: string,
-  body?: unknown
+  body?: unknown,
+  auth = false
 ): Promise<{ status: number; json: Record<string, unknown> }> {
+  const headers: Record<string, string> = {};
+  if (body) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (auth && ownerToken) {
+    headers.Authorization = `Bearer ${ownerToken}`;
+  }
+
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
+    headers: Object.keys(headers).length ? headers : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
   let json: Record<string, unknown> = {};
@@ -42,23 +52,51 @@ function assert(name: string, condition: boolean, detail?: string) {
 async function run() {
   console.log(`\nGymPro API smoke test → ${BASE}\n`);
 
+  // ── Health & OpenAPI ───────────────────────────────────
+  console.log("── Infrastructure ──");
+  let r = await req("GET", "/health");
+  assert("GET /health", r.status === 200 && r.json.success === true);
+
+  r = await req("GET", "/api-docs.json");
+  assert(
+    "GET /api-docs.json",
+    r.status === 200 && typeof (r.json as { openapi?: string }).openapi === "string"
+  );
+
+  // ── Auth (owner token required for dashboard routes) ───
+  console.log("── Auth ──");
+  r = await req("POST", "/api/auth/owner/login", {
+    email: process.env.OWNER_EMAIL ?? "admin@gmail.com",
+    password: process.env.OWNER_PASSWORD ?? "admin123",
+  });
+  assert(
+    "POST /api/auth/owner/login",
+    r.status === 200 && !!(r.json.data as { token?: string })?.token
+  );
+  ownerToken = (r.json.data as { token: string }).token;
+
   // ── Plans ──────────────────────────────────────────────
   console.log("── Plans ──");
-  let r = await req("POST", "/api/plans", {
-    name: `Test Plan ${ts}`,
-    durationDays: 30,
-    price: "750.00",
-  });
+  r = await req(
+    "POST",
+    "/api/plans",
+    {
+      name: `Test Plan ${ts}`,
+      durationDays: 30,
+      price: "750.00",
+    },
+    true
+  );
   assert("POST /api/plans", r.status === 201 && r.json.success === true);
   ids.plan = (r.json.data as { id: number }).id;
 
   r = await req("GET", "/api/plans");
-  assert("GET /api/plans", r.status === 200 && Array.isArray(r.json.data));
+  assert("GET /api/plans (public)", r.status === 200 && Array.isArray(r.json.data));
 
   r = await req("GET", `/api/plans/${ids.plan}`);
-  assert("GET /api/plans/:id", r.status === 200);
+  assert("GET /api/plans/:id (public)", r.status === 200);
 
-  r = await req("PUT", `/api/plans/${ids.plan}`, { price: "800.00" });
+  r = await req("PUT", `/api/plans/${ids.plan}`, { price: "800.00" }, true);
   assert("PUT /api/plans/:id", r.status === 200);
 
   // ── Members ────────────────────────────────────────────
@@ -68,29 +106,34 @@ async function run() {
     phone,
     planId: ids.plan,
   });
-  assert("POST /api/members", r.status === 201);
+  assert("POST /api/members (public)", r.status === 201);
   ids.member = (r.json.data as { id: number; status: string }).id;
   assert(
     "POST /api/members → pending",
     (r.json.data as { status: string }).status === "pending"
   );
 
-  r = await req("GET", "/api/members");
+  r = await req("GET", "/api/members", undefined, true);
   assert("GET /api/members", r.status === 200);
 
-  r = await req("GET", "/api/members?status=pending");
+  r = await req("GET", "/api/members?status=pending", undefined, true);
   assert("GET /api/members?status=pending", r.status === 200);
 
-  r = await req("GET", "/api/members/pending");
+  r = await req("GET", "/api/members/pending", undefined, true);
   assert("GET /api/members/pending", r.status === 200);
 
-  r = await req("GET", `/api/members/${ids.member}`);
+  r = await req("GET", `/api/members/${ids.member}`, undefined, true);
   assert("GET /api/members/:id", r.status === 200);
 
-  r = await req("PATCH", `/api/members/${ids.member}/confirm`, {
-    amount: "800.00",
-    methodLabel: "Cash",
-  });
+  r = await req(
+    "PATCH",
+    `/api/members/${ids.member}/confirm`,
+    {
+      amount: "800.00",
+      methodLabel: "Cash",
+    },
+    true
+  );
   assert("PATCH /api/members/:id/confirm", r.status === 200);
   const confirmed = r.json.data as {
     member: { status: string; endDate: string | null };
@@ -102,130 +145,164 @@ async function run() {
   );
   ids.payment = confirmed?.payment?.id;
 
-  r = await req("GET", "/api/members?status=active");
+  r = await req("GET", "/api/members?status=active", undefined, true);
   assert("GET /api/members?status=active", r.status === 200);
 
   // ── Payments ───────────────────────────────────────────
   console.log("── Payments ──");
-  r = await req("GET", "/api/payments");
+  r = await req("GET", "/api/payments", undefined, true);
   assert("GET /api/payments", r.status === 200);
 
-  r = await req("GET", `/api/payments?memberId=${ids.member}`);
+  r = await req("GET", `/api/payments?memberId=${ids.member}`, undefined, true);
   assert("GET /api/payments?memberId=", r.status === 200);
 
-  r = await req("GET", `/api/payments/${ids.payment}`);
+  r = await req("GET", `/api/payments/${ids.payment}`, undefined, true);
   assert("GET /api/payments/:id", r.status === 200);
 
-  r = await req("POST", "/api/payments", {
-    memberId: ids.member,
-    amount: "100.00",
-    methodLabel: "Bank Transfer",
-  });
+  r = await req(
+    "POST",
+    "/api/payments",
+    {
+      memberId: ids.member,
+      amount: "100.00",
+      methodLabel: "Bank Transfer",
+    },
+    true
+  );
   assert("POST /api/payments (manual)", r.status === 201);
 
   // ── Expenses ───────────────────────────────────────────
   console.log("── Expenses ──");
-  r = await req("POST", "/api/expenses", {
-    amount: "250.00",
-    description: "Equipment maintenance",
-    category: "Maintenance",
-    date: new Date().toISOString(),
-  });
+  r = await req(
+    "POST",
+    "/api/expenses",
+    {
+      amount: "250.00",
+      description: "Equipment maintenance",
+      category: "Maintenance",
+      date: new Date().toISOString(),
+    },
+    true
+  );
   assert("POST /api/expenses", r.status === 201);
   ids.expense = (r.json.data as { id: number }).id;
 
-  r = await req("GET", "/api/expenses");
+  r = await req("GET", "/api/expenses", undefined, true);
   assert("GET /api/expenses", r.status === 200);
 
-  r = await req("GET", `/api/expenses/${ids.expense}`);
+  r = await req("GET", `/api/expenses/${ids.expense}`, undefined, true);
   assert("GET /api/expenses/:id", r.status === 200);
 
-  r = await req("PUT", `/api/expenses/${ids.expense}`, {
-    amount: "275.00",
-  });
+  r = await req("PUT", `/api/expenses/${ids.expense}`, { amount: "275.00" }, true);
   assert("PUT /api/expenses/:id", r.status === 200);
 
   // ── Services ───────────────────────────────────────────
   console.log("── Services ──");
-  r = await req("POST", "/api/services", {
-    name: "Personal Training",
-    description: "1-on-1 coaching",
-    isActive: true,
-  });
+  r = await req(
+    "POST",
+    "/api/services",
+    {
+      name: "Personal Training",
+      description: "1-on-1 coaching",
+      isActive: true,
+    },
+    true
+  );
   assert("POST /api/services", r.status === 201);
   ids.service = (r.json.data as { id: number }).id;
 
   r = await req("GET", "/api/services");
-  assert("GET /api/services", r.status === 200);
+  assert("GET /api/services (public)", r.status === 200);
 
   r = await req("GET", "/api/services?activeOnly=true");
-  assert("GET /api/services?activeOnly=true", r.status === 200);
+  assert("GET /api/services?activeOnly=true (public)", r.status === 200);
 
   r = await req("GET", `/api/services/${ids.service}`);
-  assert("GET /api/services/:id", r.status === 200);
+  assert("GET /api/services/:id (public)", r.status === 200);
 
-  r = await req("PUT", `/api/services/${ids.service}`, {
-    description: "Updated coaching",
-  });
+  r = await req(
+    "PUT",
+    `/api/services/${ids.service}`,
+    { description: "Updated coaching" },
+    true
+  );
   assert("PUT /api/services/:id", r.status === 200);
 
   // ── Content ───────────────────────────────────────────
   console.log("── Content ──");
-  r = await req("POST", "/api/content", {
-    type: "manual",
-    title: "Chest Workout",
-    body: "Bench press 3x10, push-ups 3x15",
-  });
+  r = await req(
+    "POST",
+    "/api/content",
+    {
+      type: "manual",
+      title: "Chest Workout",
+      body: "Bench press 3x10, push-ups 3x15",
+    },
+    true
+  );
   assert("POST /api/content (manual)", r.status === 201);
   ids.manual = (r.json.data as { id: number }).id;
 
-  r = await req("POST", "/api/content", {
-    type: "quote",
-    title: "Daily Motivation",
-    body: "No pain, no gain.",
-  });
+  r = await req(
+    "POST",
+    "/api/content",
+    {
+      type: "quote",
+      title: "Daily Motivation",
+      body: "No pain, no gain.",
+    },
+    true
+  );
   assert("POST /api/content (quote)", r.status === 201);
   ids.quote = (r.json.data as { id: number }).id;
 
   r = await req("GET", "/api/content");
-  assert("GET /api/content", r.status === 200);
+  assert("GET /api/content (public)", r.status === 200);
 
   r = await req("GET", "/api/content?type=manual");
-  assert("GET /api/content?type=manual", r.status === 200);
+  assert("GET /api/content?type=manual (public)", r.status === 200);
 
   r = await req("GET", "/api/content/daily-quote");
-  assert("GET /api/content/daily-quote", r.status === 200);
+  assert("GET /api/content/daily-quote (public)", r.status === 200);
 
   r = await req("GET", `/api/content/${ids.manual}`);
-  assert("GET /api/content/:id", r.status === 200);
+  assert("GET /api/content/:id (public)", r.status === 200);
 
   // ── Notifications ──────────────────────────────────────
   console.log("── Notifications ──");
   const scheduledAt = new Date(Date.now() + 86400000).toISOString();
-  r = await req("POST", "/api/notifications", {
-    title: "Weekly Reminder",
-    body: "Don't skip leg day!",
-    scheduledAt,
-    isActive: true,
-  });
+  r = await req(
+    "POST",
+    "/api/notifications",
+    {
+      title: "Weekly Reminder",
+      body: "Don't skip leg day!",
+      scheduledAt,
+      isActive: true,
+    },
+    true
+  );
   assert("POST /api/notifications", r.status === 201);
   ids.notification = (r.json.data as { id: number }).id;
 
-  r = await req("GET", "/api/notifications");
+  r = await req("GET", "/api/notifications", undefined, true);
   assert("GET /api/notifications", r.status === 200);
 
-  r = await req("GET", `/api/notifications/${ids.notification}`);
+  r = await req("GET", `/api/notifications/${ids.notification}`, undefined, true);
   assert("GET /api/notifications/:id", r.status === 200);
 
-  r = await req("PUT", `/api/notifications/${ids.notification}`, {
-    title: "Updated Reminder",
-  });
+  r = await req(
+    "PUT",
+    `/api/notifications/${ids.notification}`,
+    { title: "Updated Reminder" },
+    true
+  );
   assert("PUT /api/notifications/:id", r.status === 200);
 
   // ── Reports ────────────────────────────────────────────
   console.log("── Reports ──");
   const month = new Date().toISOString().slice(0, 7);
-  r = await req("GET", `/api/reports/monthly?month=${month}`);
+  r = await req("GET", `/api/reports/monthly?month=${month}`, undefined, true);
   assert("GET /api/reports/monthly", r.status === 200);
   const report = r.json.data as { totalIncome: string; totalExpenses: string };
   assert(
@@ -234,32 +311,31 @@ async function run() {
     `income=${report?.totalIncome}`
   );
 
-  // ── Auth ───────────────────────────────────────────────
-  console.log("── Auth ──");
-  r = await req("POST", "/api/auth/owner/login", {
-    email: process.env.OWNER_EMAIL ?? "admin@gmail.com",
-    password: process.env.OWNER_PASSWORD ?? "admin123",
-  });
-  assert("POST /api/auth/owner/login", r.status === 200 && !!(r.json.data as { token?: string })?.token);
-
   r = await req("POST", "/api/auth/member/login", { phone });
-  assert("POST /api/auth/member/login", r.status === 200 && !!(r.json.data as { token?: string })?.token);
+  assert(
+    "POST /api/auth/member/login",
+    r.status === 200 && !!(r.json.data as { token?: string })?.token
+  );
+
+  // ── Auth guard ─────────────────────────────────────────
+  r = await req("GET", "/api/payments");
+  assert("GET /api/payments without token → 401", r.status === 401);
 
   // ── Cleanup (DELETE tests) ─────────────────────────────
   console.log("── Cleanup ──");
-  r = await req("DELETE", `/api/notifications/${ids.notification}`);
+  r = await req("DELETE", `/api/notifications/${ids.notification}`, undefined, true);
   assert("DELETE /api/notifications/:id", r.status === 200);
 
-  r = await req("DELETE", `/api/content/${ids.manual}`);
+  r = await req("DELETE", `/api/content/${ids.manual}`, undefined, true);
   assert("DELETE /api/content/:id (manual)", r.status === 200);
 
-  r = await req("DELETE", `/api/content/${ids.quote}`);
+  r = await req("DELETE", `/api/content/${ids.quote}`, undefined, true);
   assert("DELETE /api/content/:id (quote)", r.status === 200);
 
-  r = await req("DELETE", `/api/services/${ids.service}`);
+  r = await req("DELETE", `/api/services/${ids.service}`, undefined, true);
   assert("DELETE /api/services/:id", r.status === 200);
 
-  r = await req("DELETE", `/api/expenses/${ids.expense}`);
+  r = await req("DELETE", `/api/expenses/${ids.expense}`, undefined, true);
   assert("DELETE /api/expenses/:id", r.status === 200);
 
   // ── Summary ────────────────────────────────────────────
