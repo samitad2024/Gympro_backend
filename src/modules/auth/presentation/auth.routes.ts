@@ -1,9 +1,21 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import { validateRequest } from "@core/middleware/validate-request";
 import { memberLoginSchema, ownerLoginSchema } from "../infrastructure/auth.validators";
 import * as authController from "./auth.controller";
 
 const router = Router();
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many login attempts, please try again later",
+  },
+});
 
 /**
  * @openapi
@@ -26,9 +38,17 @@ const router = Router();
  *     responses:
  *       200:
  *         description: JWT token for dashboard access
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
  */
 router.post(
   "/owner/login",
+  authLimiter,
   validateRequest({ body: ownerLoginSchema }),
   authController.ownerLogin
 );
@@ -52,9 +72,19 @@ router.post(
  *     responses:
  *       200:
  *         description: JWT token and member profile
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/SuccessResponse'
+ *       403:
+ *         $ref: '#/components/responses/Forbidden'
+ *       404:
+ *         $ref: '#/components/responses/NotFound'
  */
 router.post(
   "/member/login",
+  authLimiter,
   validateRequest({ body: memberLoginSchema }),
   authController.memberLogin
 );
