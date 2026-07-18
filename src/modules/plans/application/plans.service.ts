@@ -1,4 +1,5 @@
 import { AppError } from "@core/errors/app-error";
+import { countMembersByPlanId } from "@modules/members/infrastructure/members.repository";
 import * as plansRepo from "../infrastructure/plans.repository";
 import { CreatePlanInput, UpdatePlanInput } from "../domain/plans.types";
 
@@ -27,9 +28,18 @@ export async function updatePlan(id: number, input: UpdatePlanInput) {
 }
 
 export async function deletePlan(id: number) {
-  const plan = await plansRepo.deletePlan(id);
+  const plan = await plansRepo.findPlanById(id);
   if (!plan) {
     throw new AppError("Plan not found", 404);
   }
-  return plan;
+
+  const memberCount = await countMembersByPlanId(id);
+  if (memberCount > 0) {
+    throw new AppError(
+      "Cannot delete plan while members are assigned to it",
+      409
+    );
+  }
+
+  return plansRepo.deletePlan(id);
 }

@@ -10,4 +10,9 @@ const isLocal =
 const queryClient = postgres(env.DATABASE_URL, {
   ssl: isLocal ? false : "require",
 });
+
 export const db = drizzle(queryClient, { schema });
+
+export async function closeDatabase() {
+  await queryClient.end({ timeout: 5 });
+}

@@ -1,5 +1,5 @@
 import { AppError } from "@core/errors/app-error";
-import { findMemberById } from "@modules/members/infrastructure/members.repository";
+import { getMemberById } from "@modules/members/application/members.service";
 import * as paymentsRepo from "../infrastructure/payments.repository";
 import { CreatePaymentInput } from "../domain/payments.types";
 
@@ -16,10 +16,7 @@ export async function getPaymentById(id: number) {
 }
 
 export async function createManualPayment(input: CreatePaymentInput) {
-  const member = await findMemberById(input.memberId);
-  if (!member) {
-    throw new AppError("Member not found", 404);
-  }
+  const member = await getMemberById(input.memberId);
   if (member.status !== "active") {
     throw new AppError("Payments can only be added for active members", 400);
   }
