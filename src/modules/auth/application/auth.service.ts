@@ -10,15 +10,14 @@ import {
 } from "../domain/auth.types";
 
 export async function ensureOwnerExists() {
-  const passwordHash = await bcrypt.hash(env.OWNER_PASSWORD, 10);
   const existing = await authRepo.findOwnerByEmail(env.OWNER_EMAIL);
-
   if (existing) {
-    return authRepo.updateOwner(existing.id, env.OWNER_EMAIL, passwordHash);
+    return existing;
   }
 
-  // Single-gym pilot: migrate legacy owner row to current env credentials
   const legacyOwner = await authRepo.findAnyOwner();
+  const passwordHash = await bcrypt.hash(env.OWNER_PASSWORD, 10);
+
   if (legacyOwner) {
     return authRepo.updateOwner(
       legacyOwner.id,
@@ -33,7 +32,6 @@ export async function ensureOwnerExists() {
 export async function ownerLogin(
   input: OwnerLoginInput
 ): Promise<{ token: string }> {
-  await ensureOwnerExists();
   const owner = await authRepo.findOwnerByEmail(input.email);
   if (!owner) {
     throw new AppError("Invalid email or password", 401);
@@ -54,6 +52,10 @@ export async function memberLogin(
   const member = await authRepo.findMemberByPhoneForAuth(input.phone);
   if (!member) {
     throw new AppError("Member not found", 404);
+  }
+
+  if (member.status === "expired") {
+    throw new AppError("Membership has expired", 403);
   }
 
   const token = signMemberToken({ sub: member.id, role: "member" });
