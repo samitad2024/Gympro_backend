@@ -1,0 +1,1538 @@
+﻿{
+    "openapi":  "3.0.0",
+    "info":  {
+                 "title":  "GymPro Backend API",
+                 "version":  "1.0.0",
+                 "description":  "Backend API for single-gym member management, income/expense tracking, and content delivery.\n\n## Response envelope\nAll endpoints return `{ success, message?, data?, errors? }`.\n\n## Authentication\n- **Dashboard (owner):** `POST /api/auth/owner/login` → use `Authorization: Bearer \u003ctoken\u003e` on protected routes.\n- **Mobile (member):** `POST /api/auth/member/login` by phone.\n\n## Public routes (no token)\n- `POST /api/members` — member registration\n- `GET /api/plans`, `GET /api/plans/{id}` — plan listing\n- `GET /api/services`, `GET /api/services/{id}` — service listing\n- `GET /api/content`, `GET /api/content/daily-quote`, `GET /api/content/{id}` — content\n- `POST /api/auth/owner/login`, `POST /api/auth/member/login`"
+             },
+    "servers":  [
+                    {
+                        "url":  "http://localhost:4000",
+                        "description":  "Local dev"
+                    }
+                ],
+    "components":  {
+                       "securitySchemes":  {
+                                               "bearerAuth":  {
+                                                                  "type":  "http",
+                                                                  "scheme":  "bearer",
+                                                                  "bearerFormat":  "JWT",
+                                                                  "description":  "Step 1: Call POST /api/auth/owner/login. Step 2: Copy only the token value from data.token. Step 3: Click Authorize and paste the token (do NOT type \u0027Bearer\u0027)."
+                                                              }
+                                           },
+                       "schemas":  {
+                                       "SuccessResponse":  {
+                                                               "type":  "object",
+                                                               "required":  [
+                                                                                "success",
+                                                                                "data"
+                                                                            ],
+                                                               "properties":  {
+                                                                                  "success":  {
+                                                                                                  "type":  "boolean",
+                                                                                                  "example":  true
+                                                                                              },
+                                                                                  "message":  {
+                                                                                                  "type":  "string",
+                                                                                                  "nullable":  true
+                                                                                              },
+                                                                                  "data":  {
+                                                                                               "type":  "object"
+                                                                                           }
+                                                                              }
+                                                           },
+                                       "ErrorResponse":  {
+                                                             "type":  "object",
+                                                             "required":  [
+                                                                              "success",
+                                                                              "message"
+                                                                          ],
+                                                             "properties":  {
+                                                                                "success":  {
+                                                                                                "type":  "boolean",
+                                                                                                "example":  false
+                                                                                            },
+                                                                                "message":  {
+                                                                                                "type":  "string",
+                                                                                                "example":  "Validation failed"
+                                                                                            },
+                                                                                "errors":  {
+                                                                                               "type":  "object",
+                                                                                               "nullable":  true,
+                                                                                               "description":  "Zod validation errors or extra context"
+                                                                                           }
+                                                                            }
+                                                         }
+                                   },
+                       "responses":  {
+                                         "BadRequest":  {
+                                                            "description":  "Validation failed",
+                                                            "content":  {
+                                                                            "application/json":  {
+                                                                                                     "schema":  {
+                                                                                                                    "$ref":  "#/components/schemas/ErrorResponse"
+                                                                                                                }
+                                                                                                 }
+                                                                        }
+                                                        },
+                                         "Unauthorized":  {
+                                                              "description":  "Missing or invalid JWT",
+                                                              "content":  {
+                                                                              "application/json":  {
+                                                                                                       "schema":  {
+                                                                                                                      "$ref":  "#/components/schemas/ErrorResponse"
+                                                                                                                  }
+                                                                                                   }
+                                                                          }
+                                                          },
+                                         "Forbidden":  {
+                                                           "description":  "Insufficient permissions",
+                                                           "content":  {
+                                                                           "application/json":  {
+                                                                                                    "schema":  {
+                                                                                                                   "$ref":  "#/components/schemas/ErrorResponse"
+                                                                                                               }
+                                                                                                }
+                                                                       }
+                                                       },
+                                         "NotFound":  {
+                                                          "description":  "Resource not found",
+                                                          "content":  {
+                                                                          "application/json":  {
+                                                                                                   "schema":  {
+                                                                                                                  "$ref":  "#/components/schemas/ErrorResponse"
+                                                                                                              }
+                                                                                               }
+                                                                      }
+                                                      },
+                                         "Conflict":  {
+                                                          "description":  "Duplicate or conflicting record",
+                                                          "content":  {
+                                                                          "application/json":  {
+                                                                                                   "schema":  {
+                                                                                                                  "$ref":  "#/components/schemas/ErrorResponse"
+                                                                                                              }
+                                                                                               }
+                                                                      }
+                                                      }
+                                     }
+                   },
+    "security":  [
+                     {
+                         "bearerAuth":  [
+
+                                        ]
+                     }
+                 ],
+    "paths":  {
+                  "/api/services":  {
+                                        "get":  {
+                                                    "tags":  [
+                                                                 "Services"
+                                                             ],
+                                                    "summary":  "List gym services",
+                                                    "parameters":  [
+                                                                       {
+                                                                           "in":  "query",
+                                                                           "name":  "activeOnly",
+                                                                           "schema":  {
+                                                                                          "type":  "boolean"
+                                                                                      }
+                                                                       }
+                                                                   ],
+                                                    "responses":  {
+                                                                      "200":  {
+                                                                                  "description":  "List of services"
+                                                                              }
+                                                                  },
+                                                    "security":  [
+
+                                                                 ]
+                                                },
+                                        "post":  {
+                                                     "tags":  [
+                                                                  "Services"
+                                                              ],
+                                                     "summary":  "Create a service",
+                                                     "requestBody":  {
+                                                                         "required":  true,
+                                                                         "content":  {
+                                                                                         "application/json":  {
+                                                                                                                  "schema":  {
+                                                                                                                                 "type":  "object",
+                                                                                                                                 "required":  [
+                                                                                                                                                  "name"
+                                                                                                                                              ],
+                                                                                                                                 "properties":  {
+                                                                                                                                                    "name":  {
+                                                                                                                                                                 "type":  "string"
+                                                                                                                                                             },
+                                                                                                                                                    "description":  {
+                                                                                                                                                                        "type":  "string"
+                                                                                                                                                                    },
+                                                                                                                                                    "isActive":  {
+                                                                                                                                                                     "type":  "boolean"
+                                                                                                                                                                 }
+                                                                                                                                                }
+                                                                                                                             }
+                                                                                                              }
+                                                                                     }
+                                                                     },
+                                                     "responses":  {
+                                                                       "201":  {
+                                                                                   "description":  "Service created"
+                                                                               },
+                                                                       "401":  {
+                                                                                   "$ref":  "#/components/responses/Unauthorized"
+                                                                               }
+                                                                   },
+                                                     "security":  [
+                                                                      {
+                                                                          "bearerAuth":  [
+
+                                                                                         ]
+                                                                      }
+                                                                  ]
+                                                 }
+                                    },
+                  "/api/services/{id}":  {
+                                             "get":  {
+                                                         "tags":  [
+                                                                      "Services"
+                                                                  ],
+                                                         "summary":  "Get a service by ID",
+                                                         "parameters":  [
+                                                                            {
+                                                                                "in":  "path",
+                                                                                "name":  "id",
+                                                                                "required":  true,
+                                                                                "schema":  {
+                                                                                               "type":  "integer"
+                                                                                           }
+                                                                            }
+                                                                        ],
+                                                         "responses":  {
+                                                                           "200":  {
+                                                                                       "description":  "Service details"
+                                                                                   }
+                                                                       },
+                                                         "security":  [
+
+                                                                      ]
+                                                     },
+                                             "put":  {
+                                                         "tags":  [
+                                                                      "Services"
+                                                                  ],
+                                                         "summary":  "Update a service",
+                                                         "parameters":  [
+                                                                            {
+                                                                                "in":  "path",
+                                                                                "name":  "id",
+                                                                                "required":  true,
+                                                                                "schema":  {
+                                                                                               "type":  "integer"
+                                                                                           }
+                                                                            }
+                                                                        ],
+                                                         "responses":  {
+                                                                           "200":  {
+                                                                                       "description":  "Service updated"
+                                                                                   },
+                                                                           "401":  {
+                                                                                       "$ref":  "#/components/responses/Unauthorized"
+                                                                                   }
+                                                                       },
+                                                         "security":  [
+                                                                          {
+                                                                              "bearerAuth":  [
+
+                                                                                             ]
+                                                                          }
+                                                                      ]
+                                                     },
+                                             "delete":  {
+                                                            "tags":  [
+                                                                         "Services"
+                                                                     ],
+                                                            "summary":  "Delete a service",
+                                                            "parameters":  [
+                                                                               {
+                                                                                   "in":  "path",
+                                                                                   "name":  "id",
+                                                                                   "required":  true,
+                                                                                   "schema":  {
+                                                                                                  "type":  "integer"
+                                                                                              }
+                                                                               }
+                                                                           ],
+                                                            "responses":  {
+                                                                              "200":  {
+                                                                                          "description":  "Service deleted"
+                                                                                      },
+                                                                              "401":  {
+                                                                                          "$ref":  "#/components/responses/Unauthorized"
+                                                                                      }
+                                                                          },
+                                                            "security":  [
+                                                                             {
+                                                                                 "bearerAuth":  [
+
+                                                                                                ]
+                                                                             }
+                                                                         ]
+                                                        }
+                                         },
+                  "/api/reports/monthly":  {
+                                               "get":  {
+                                                           "tags":  [
+                                                                        "Reports"
+                                                                    ],
+                                                           "summary":  "Get monthly income/expense summary",
+                                                           "parameters":  [
+                                                                              {
+                                                                                  "in":  "query",
+                                                                                  "name":  "month",
+                                                                                  "required":  true,
+                                                                                  "schema":  {
+                                                                                                 "type":  "string",
+                                                                                                 "example":  "2026-07"
+                                                                                             }
+                                                                              }
+                                                                          ],
+                                                           "responses":  {
+                                                                             "200":  {
+                                                                                         "description":  "Monthly report with income, expenses, and net profit"
+                                                                                     },
+                                                                             "401":  {
+                                                                                         "$ref":  "#/components/responses/Unauthorized"
+                                                                                     }
+                                                                         },
+                                                           "security":  [
+                                                                            {
+                                                                                "bearerAuth":  [
+
+                                                                                               ]
+                                                                            }
+                                                                        ]
+                                                       }
+                                           },
+                  "/api/plans":  {
+                                     "get":  {
+                                                 "tags":  [
+                                                              "Plans"
+                                                          ],
+                                                 "summary":  "List all membership plans",
+                                                 "responses":  {
+                                                                   "200":  {
+                                                                               "description":  "List of plans"
+                                                                           }
+                                                               },
+                                                 "security":  [
+
+                                                              ]
+                                             },
+                                     "post":  {
+                                                  "tags":  [
+                                                               "Plans"
+                                                           ],
+                                                  "summary":  "Create a membership plan",
+                                                  "requestBody":  {
+                                                                      "required":  true,
+                                                                      "content":  {
+                                                                                      "application/json":  {
+                                                                                                               "schema":  {
+                                                                                                                              "type":  "object",
+                                                                                                                              "required":  [
+                                                                                                                                               "name",
+                                                                                                                                               "durationDays",
+                                                                                                                                               "price"
+                                                                                                                                           ],
+                                                                                                                              "properties":  {
+                                                                                                                                                 "name":  {
+                                                                                                                                                              "type":  "string",
+                                                                                                                                                              "example":  "Monthly Plan"
+                                                                                                                                                          },
+                                                                                                                                                 "durationDays":  {
+                                                                                                                                                                      "type":  "integer",
+                                                                                                                                                                      "minimum":  1,
+                                                                                                                                                                      "example":  30
+                                                                                                                                                                  },
+                                                                                                                                                 "price":  {
+                                                                                                                                                               "type":  "string",
+                                                                                                                                                               "example":  "500.00"
+                                                                                                                                                           }
+                                                                                                                                             }
+                                                                                                                          }
+                                                                                                           }
+                                                                                  }
+                                                                  },
+                                                  "responses":  {
+                                                                    "201":  {
+                                                                                "description":  "Plan created"
+                                                                            },
+                                                                    "401":  {
+                                                                                "$ref":  "#/components/responses/Unauthorized"
+                                                                            }
+                                                                },
+                                                  "security":  [
+                                                                   {
+                                                                       "bearerAuth":  [
+
+                                                                                      ]
+                                                                   }
+                                                               ]
+                                              }
+                                 },
+                  "/api/plans/{id}":  {
+                                          "get":  {
+                                                      "tags":  [
+                                                                   "Plans"
+                                                               ],
+                                                      "summary":  "Get a plan by ID",
+                                                      "parameters":  [
+                                                                         {
+                                                                             "in":  "path",
+                                                                             "name":  "id",
+                                                                             "required":  true,
+                                                                             "schema":  {
+                                                                                            "type":  "integer"
+                                                                                        }
+                                                                         }
+                                                                     ],
+                                                      "responses":  {
+                                                                        "200":  {
+                                                                                    "description":  "Plan details"
+                                                                                },
+                                                                        "404":  {
+                                                                                    "description":  "Plan not found"
+                                                                                }
+                                                                    },
+                                                      "security":  [
+
+                                                                   ]
+                                                  },
+                                          "put":  {
+                                                      "tags":  [
+                                                                   "Plans"
+                                                               ],
+                                                      "summary":  "Update a membership plan",
+                                                      "parameters":  [
+                                                                         {
+                                                                             "in":  "path",
+                                                                             "name":  "id",
+                                                                             "required":  true,
+                                                                             "schema":  {
+                                                                                            "type":  "integer"
+                                                                                        }
+                                                                         }
+                                                                     ],
+                                                      "requestBody":  {
+                                                                          "required":  true,
+                                                                          "content":  {
+                                                                                          "application/json":  {
+                                                                                                                   "schema":  {
+                                                                                                                                  "type":  "object",
+                                                                                                                                  "properties":  {
+                                                                                                                                                     "name":  {
+                                                                                                                                                                  "type":  "string"
+                                                                                                                                                              },
+                                                                                                                                                     "durationDays":  {
+                                                                                                                                                                          "type":  "integer"
+                                                                                                                                                                      },
+                                                                                                                                                     "price":  {
+                                                                                                                                                                   "type":  "string"
+                                                                                                                                                               }
+                                                                                                                                                 }
+                                                                                                                              }
+                                                                                                               }
+                                                                                      }
+                                                                      },
+                                                      "responses":  {
+                                                                        "200":  {
+                                                                                    "description":  "Plan updated"
+                                                                                },
+                                                                        "401":  {
+                                                                                    "$ref":  "#/components/responses/Unauthorized"
+                                                                                },
+                                                                        "404":  {
+                                                                                    "description":  "Plan not found"
+                                                                                }
+                                                                    },
+                                                      "security":  [
+                                                                       {
+                                                                           "bearerAuth":  [
+
+                                                                                          ]
+                                                                       }
+                                                                   ]
+                                                  },
+                                          "delete":  {
+                                                         "tags":  [
+                                                                      "Plans"
+                                                                  ],
+                                                         "summary":  "Delete a membership plan",
+                                                         "parameters":  [
+                                                                            {
+                                                                                "in":  "path",
+                                                                                "name":  "id",
+                                                                                "required":  true,
+                                                                                "schema":  {
+                                                                                               "type":  "integer"
+                                                                                           }
+                                                                            }
+                                                                        ],
+                                                         "responses":  {
+                                                                           "200":  {
+                                                                                       "description":  "Plan deleted"
+                                                                                   },
+                                                                           "401":  {
+                                                                                       "$ref":  "#/components/responses/Unauthorized"
+                                                                                   },
+                                                                           "404":  {
+                                                                                       "description":  "Plan not found"
+                                                                                   }
+                                                                       },
+                                                         "security":  [
+                                                                          {
+                                                                              "bearerAuth":  [
+
+                                                                                             ]
+                                                                          }
+                                                                      ]
+                                                     }
+                                      },
+                  "/api/payments":  {
+                                        "get":  {
+                                                    "tags":  [
+                                                                 "Payments"
+                                                             ],
+                                                    "summary":  "List all payments",
+                                                    "parameters":  [
+                                                                       {
+                                                                           "in":  "query",
+                                                                           "name":  "memberId",
+                                                                           "schema":  {
+                                                                                          "type":  "integer"
+                                                                                      }
+                                                                       }
+                                                                   ],
+                                                    "responses":  {
+                                                                      "200":  {
+                                                                                  "description":  "List of payments"
+                                                                              },
+                                                                      "401":  {
+                                                                                  "$ref":  "#/components/responses/Unauthorized"
+                                                                              }
+                                                                  },
+                                                    "security":  [
+                                                                     {
+                                                                         "bearerAuth":  [
+
+                                                                                        ]
+                                                                     }
+                                                                 ]
+                                                },
+                                        "post":  {
+                                                     "tags":  [
+                                                                  "Payments"
+                                                              ],
+                                                     "summary":  "Manually add a payment for an active member",
+                                                     "requestBody":  {
+                                                                         "required":  true,
+                                                                         "content":  {
+                                                                                         "application/json":  {
+                                                                                                                  "schema":  {
+                                                                                                                                 "type":  "object",
+                                                                                                                                 "required":  [
+                                                                                                                                                  "memberId",
+                                                                                                                                                  "amount",
+                                                                                                                                                  "methodLabel"
+                                                                                                                                              ],
+                                                                                                                                 "properties":  {
+                                                                                                                                                    "memberId":  {
+                                                                                                                                                                     "type":  "integer"
+                                                                                                                                                                 },
+                                                                                                                                                    "amount":  {
+                                                                                                                                                                   "type":  "string"
+                                                                                                                                                               },
+                                                                                                                                                    "methodLabel":  {
+                                                                                                                                                                        "type":  "string"
+                                                                                                                                                                    },
+                                                                                                                                                    "date":  {
+                                                                                                                                                                 "type":  "string",
+                                                                                                                                                                 "format":  "date-time"
+                                                                                                                                                             }
+                                                                                                                                                }
+                                                                                                                             }
+                                                                                                              }
+                                                                                     }
+                                                                     },
+                                                     "responses":  {
+                                                                       "201":  {
+                                                                                   "description":  "Payment created"
+                                                                               },
+                                                                       "401":  {
+                                                                                   "$ref":  "#/components/responses/Unauthorized"
+                                                                               }
+                                                                   },
+                                                     "security":  [
+                                                                      {
+                                                                          "bearerAuth":  [
+
+                                                                                         ]
+                                                                      }
+                                                                  ]
+                                                 }
+                                    },
+                  "/api/payments/{id}":  {
+                                             "get":  {
+                                                         "tags":  [
+                                                                      "Payments"
+                                                                  ],
+                                                         "summary":  "Get a payment by ID",
+                                                         "parameters":  [
+                                                                            {
+                                                                                "in":  "path",
+                                                                                "name":  "id",
+                                                                                "required":  true,
+                                                                                "schema":  {
+                                                                                               "type":  "integer"
+                                                                                           }
+                                                                            }
+                                                                        ],
+                                                         "responses":  {
+                                                                           "200":  {
+                                                                                       "description":  "Payment details"
+                                                                                   },
+                                                                           "401":  {
+                                                                                       "$ref":  "#/components/responses/Unauthorized"
+                                                                                   }
+                                                                       },
+                                                         "security":  [
+                                                                          {
+                                                                              "bearerAuth":  [
+
+                                                                                             ]
+                                                                          }
+                                                                      ]
+                                                     }
+                                         },
+                  "/api/notifications":  {
+                                             "get":  {
+                                                         "tags":  [
+                                                                      "Notifications"
+                                                                  ],
+                                                         "summary":  "List scheduled notifications",
+                                                         "responses":  {
+                                                                           "200":  {
+                                                                                       "description":  "List of scheduled notifications"
+                                                                                   },
+                                                                           "401":  {
+                                                                                       "$ref":  "#/components/responses/Unauthorized"
+                                                                                   }
+                                                                       },
+                                                         "security":  [
+                                                                          {
+                                                                              "bearerAuth":  [
+
+                                                                                             ]
+                                                                          }
+                                                                      ]
+                                                     },
+                                             "post":  {
+                                                          "tags":  [
+                                                                       "Notifications"
+                                                                   ],
+                                                          "summary":  "Schedule a new notification",
+                                                          "requestBody":  {
+                                                                              "required":  true,
+                                                                              "content":  {
+                                                                                              "application/json":  {
+                                                                                                                       "schema":  {
+                                                                                                                                      "type":  "object",
+                                                                                                                                      "required":  [
+                                                                                                                                                       "title",
+                                                                                                                                                       "body",
+                                                                                                                                                       "scheduledAt"
+                                                                                                                                                   ],
+                                                                                                                                      "properties":  {
+                                                                                                                                                         "title":  {
+                                                                                                                                                                       "type":  "string"
+                                                                                                                                                                   },
+                                                                                                                                                         "body":  {
+                                                                                                                                                                      "type":  "string"
+                                                                                                                                                                  },
+                                                                                                                                                         "scheduledAt":  {
+                                                                                                                                                                             "type":  "string",
+                                                                                                                                                                             "format":  "date-time"
+                                                                                                                                                                         },
+                                                                                                                                                         "isActive":  {
+                                                                                                                                                                          "type":  "boolean"
+                                                                                                                                                                      }
+                                                                                                                                                     }
+                                                                                                                                  }
+                                                                                                                   }
+                                                                                          }
+                                                                          },
+                                                          "responses":  {
+                                                                            "201":  {
+                                                                                        "description":  "Notification scheduled"
+                                                                                    },
+                                                                            "401":  {
+                                                                                        "$ref":  "#/components/responses/Unauthorized"
+                                                                                    }
+                                                                        },
+                                                          "security":  [
+                                                                           {
+                                                                               "bearerAuth":  [
+
+                                                                                              ]
+                                                                           }
+                                                                       ]
+                                                      }
+                                         },
+                  "/api/notifications/{id}":  {
+                                                  "get":  {
+                                                              "tags":  [
+                                                                           "Notifications"
+                                                                       ],
+                                                              "summary":  "Get a scheduled notification by ID",
+                                                              "parameters":  [
+                                                                                 {
+                                                                                     "in":  "path",
+                                                                                     "name":  "id",
+                                                                                     "required":  true,
+                                                                                     "schema":  {
+                                                                                                    "type":  "integer"
+                                                                                                }
+                                                                                 }
+                                                                             ],
+                                                              "responses":  {
+                                                                                "200":  {
+                                                                                            "description":  "Notification details"
+                                                                                        },
+                                                                                "401":  {
+                                                                                            "$ref":  "#/components/responses/Unauthorized"
+                                                                                        }
+                                                                            },
+                                                              "security":  [
+                                                                               {
+                                                                                   "bearerAuth":  [
+
+                                                                                                  ]
+                                                                               }
+                                                                           ]
+                                                          },
+                                                  "put":  {
+                                                              "tags":  [
+                                                                           "Notifications"
+                                                                       ],
+                                                              "summary":  "Update a scheduled notification",
+                                                              "parameters":  [
+                                                                                 {
+                                                                                     "in":  "path",
+                                                                                     "name":  "id",
+                                                                                     "required":  true,
+                                                                                     "schema":  {
+                                                                                                    "type":  "integer"
+                                                                                                }
+                                                                                 }
+                                                                             ],
+                                                              "responses":  {
+                                                                                "200":  {
+                                                                                            "description":  "Notification updated"
+                                                                                        },
+                                                                                "401":  {
+                                                                                            "$ref":  "#/components/responses/Unauthorized"
+                                                                                        }
+                                                                            },
+                                                              "security":  [
+                                                                               {
+                                                                                   "bearerAuth":  [
+
+                                                                                                  ]
+                                                                               }
+                                                                           ]
+                                                          },
+                                                  "delete":  {
+                                                                 "tags":  [
+                                                                              "Notifications"
+                                                                          ],
+                                                                 "summary":  "Delete a scheduled notification",
+                                                                 "parameters":  [
+                                                                                    {
+                                                                                        "in":  "path",
+                                                                                        "name":  "id",
+                                                                                        "required":  true,
+                                                                                        "schema":  {
+                                                                                                       "type":  "integer"
+                                                                                                   }
+                                                                                    }
+                                                                                ],
+                                                                 "responses":  {
+                                                                                   "200":  {
+                                                                                               "description":  "Notification deleted"
+                                                                                           },
+                                                                                   "401":  {
+                                                                                               "$ref":  "#/components/responses/Unauthorized"
+                                                                                           }
+                                                                               },
+                                                                 "security":  [
+                                                                                  {
+                                                                                      "bearerAuth":  [
+
+                                                                                                     ]
+                                                                                  }
+                                                                              ]
+                                                             }
+                                              },
+                  "/api/members":  {
+                                       "get":  {
+                                                   "tags":  [
+                                                                "Members"
+                                                            ],
+                                                   "summary":  "List all members",
+                                                   "parameters":  [
+                                                                      {
+                                                                          "in":  "query",
+                                                                          "name":  "status",
+                                                                          "schema":  {
+                                                                                         "type":  "string",
+                                                                                         "enum":  [
+                                                                                                      "pending",
+                                                                                                      "active",
+                                                                                                      "expired"
+                                                                                                  ]
+                                                                                     }
+                                                                      }
+                                                                  ],
+                                                   "responses":  {
+                                                                     "200":  {
+                                                                                 "description":  "List of members"
+                                                                             },
+                                                                     "401":  {
+                                                                                 "$ref":  "#/components/responses/Unauthorized"
+                                                                             }
+                                                                 },
+                                                   "security":  [
+                                                                    {
+                                                                        "bearerAuth":  [
+
+                                                                                       ]
+                                                                    }
+                                                                ]
+                                               },
+                                       "post":  {
+                                                    "tags":  [
+                                                                 "Members"
+                                                             ],
+                                                    "summary":  "Register a new member (status = pending)",
+                                                    "requestBody":  {
+                                                                        "required":  true,
+                                                                        "content":  {
+                                                                                        "application/json":  {
+                                                                                                                 "schema":  {
+                                                                                                                                "type":  "object",
+                                                                                                                                "required":  [
+                                                                                                                                                 "name",
+                                                                                                                                                 "phone",
+                                                                                                                                                 "planId"
+                                                                                                                                             ],
+                                                                                                                                "properties":  {
+                                                                                                                                                   "name":  {
+                                                                                                                                                                "type":  "string",
+                                                                                                                                                                "example":  "John Doe"
+                                                                                                                                                            },
+                                                                                                                                                   "phone":  {
+                                                                                                                                                                 "type":  "string",
+                                                                                                                                                                 "example":  "0912345678"
+                                                                                                                                                             },
+                                                                                                                                                   "planId":  {
+                                                                                                                                                                  "type":  "integer",
+                                                                                                                                                                  "minimum":  1,
+                                                                                                                                                                  "example":  1
+                                                                                                                                                              },
+                                                                                                                                                   "fcmToken":  {
+                                                                                                                                                                    "type":  "string",
+                                                                                                                                                                    "example":  ""
+                                                                                                                                                                }
+                                                                                                                                               }
+                                                                                                                            }
+                                                                                                             }
+                                                                                    }
+                                                                    },
+                                                    "responses":  {
+                                                                      "201":  {
+                                                                                  "description":  "Member registered with pending status"
+                                                                              }
+                                                                  },
+                                                    "security":  [
+
+                                                                 ]
+                                                }
+                                   },
+                  "/api/members/pending":  {
+                                               "get":  {
+                                                           "tags":  [
+                                                                        "Members"
+                                                                    ],
+                                                           "summary":  "List pending members awaiting payment confirmation",
+                                                           "responses":  {
+                                                                             "200":  {
+                                                                                         "description":  "Pending members queue"
+                                                                                     },
+                                                                             "401":  {
+                                                                                         "$ref":  "#/components/responses/Unauthorized"
+                                                                                     }
+                                                                         },
+                                                           "security":  [
+                                                                            {
+                                                                                "bearerAuth":  [
+
+                                                                                               ]
+                                                                            }
+                                                                        ]
+                                                       }
+                                           },
+                  "/api/members/{id}":  {
+                                            "get":  {
+                                                        "tags":  [
+                                                                     "Members"
+                                                                 ],
+                                                        "summary":  "Get a member by ID",
+                                                        "parameters":  [
+                                                                           {
+                                                                               "in":  "path",
+                                                                               "name":  "id",
+                                                                               "required":  true,
+                                                                               "schema":  {
+                                                                                              "type":  "integer"
+                                                                                          }
+                                                                           }
+                                                                       ],
+                                                        "responses":  {
+                                                                          "200":  {
+                                                                                      "description":  "Member details"
+                                                                                  },
+                                                                          "401":  {
+                                                                                      "$ref":  "#/components/responses/Unauthorized"
+                                                                                  },
+                                                                          "404":  {
+                                                                                      "description":  "Member not found"
+                                                                                  }
+                                                                      },
+                                                        "security":  [
+                                                                         {
+                                                                             "bearerAuth":  [
+
+                                                                                            ]
+                                                                         }
+                                                                     ]
+                                                    },
+                                            "put":  {
+                                                        "tags":  [
+                                                                     "Members"
+                                                                 ],
+                                                        "summary":  "Update a member",
+                                                        "parameters":  [
+                                                                           {
+                                                                               "in":  "path",
+                                                                               "name":  "id",
+                                                                               "required":  true,
+                                                                               "schema":  {
+                                                                                              "type":  "integer"
+                                                                                          }
+                                                                           }
+                                                                       ],
+                                                        "requestBody":  {
+                                                                            "required":  true,
+                                                                            "content":  {
+                                                                                            "application/json":  {
+                                                                                                                     "schema":  {
+                                                                                                                                    "type":  "object",
+                                                                                                                                    "properties":  {
+                                                                                                                                                       "name":  {
+                                                                                                                                                                    "type":  "string"
+                                                                                                                                                                },
+                                                                                                                                                       "phone":  {
+                                                                                                                                                                     "type":  "string"
+                                                                                                                                                                 },
+                                                                                                                                                       "planId":  {
+                                                                                                                                                                      "type":  "integer"
+                                                                                                                                                                  },
+                                                                                                                                                       "fcmToken":  {
+                                                                                                                                                                        "type":  "string"
+                                                                                                                                                                    }
+                                                                                                                                                   }
+                                                                                                                                }
+                                                                                                                 }
+                                                                                        }
+                                                                        },
+                                                        "responses":  {
+                                                                          "200":  {
+                                                                                      "description":  "Member updated"
+                                                                                  },
+                                                                          "401":  {
+                                                                                      "$ref":  "#/components/responses/Unauthorized"
+                                                                                  }
+                                                                      },
+                                                        "security":  [
+                                                                         {
+                                                                             "bearerAuth":  [
+
+                                                                                            ]
+                                                                         }
+                                                                     ]
+                                                    },
+                                            "delete":  {
+                                                           "tags":  [
+                                                                        "Members"
+                                                                    ],
+                                                           "summary":  "Delete a member",
+                                                           "parameters":  [
+                                                                              {
+                                                                                  "in":  "path",
+                                                                                  "name":  "id",
+                                                                                  "required":  true,
+                                                                                  "schema":  {
+                                                                                                 "type":  "integer"
+                                                                                             }
+                                                                              }
+                                                                          ],
+                                                           "responses":  {
+                                                                             "200":  {
+                                                                                         "description":  "Member deleted"
+                                                                                     },
+                                                                             "401":  {
+                                                                                         "$ref":  "#/components/responses/Unauthorized"
+                                                                                     }
+                                                                         },
+                                                           "security":  [
+                                                                            {
+                                                                                "bearerAuth":  [
+
+                                                                                               ]
+                                                                            }
+                                                                        ]
+                                                       }
+                                        },
+                  "/api/members/{id}/confirm":  {
+                                                    "patch":  {
+                                                                  "tags":  [
+                                                                               "Members"
+                                                                           ],
+                                                                  "summary":  "Confirm payment and activate a pending member",
+                                                                  "parameters":  [
+                                                                                     {
+                                                                                         "in":  "path",
+                                                                                         "name":  "id",
+                                                                                         "required":  true,
+                                                                                         "schema":  {
+                                                                                                        "type":  "integer"
+                                                                                                    }
+                                                                                     }
+                                                                                 ],
+                                                                  "requestBody":  {
+                                                                                      "required":  true,
+                                                                                      "content":  {
+                                                                                                      "application/json":  {
+                                                                                                                               "schema":  {
+                                                                                                                                              "type":  "object",
+                                                                                                                                              "required":  [
+                                                                                                                                                               "amount",
+                                                                                                                                                               "methodLabel"
+                                                                                                                                                           ],
+                                                                                                                                              "properties":  {
+                                                                                                                                                                 "amount":  {
+                                                                                                                                                                                "type":  "string",
+                                                                                                                                                                                "example":  "500.00"
+                                                                                                                                                                            },
+                                                                                                                                                                 "methodLabel":  {
+                                                                                                                                                                                     "type":  "string",
+                                                                                                                                                                                     "example":  "Cash"
+                                                                                                                                                                                 }
+                                                                                                                                                             }
+                                                                                                                                          }
+                                                                                                                           }
+                                                                                                  }
+                                                                                  },
+                                                                  "responses":  {
+                                                                                    "200":  {
+                                                                                                "description":  "Member activated and payment logged"
+                                                                                            },
+                                                                                    "401":  {
+                                                                                                "$ref":  "#/components/responses/Unauthorized"
+                                                                                            }
+                                                                                },
+                                                                  "security":  [
+                                                                                   {
+                                                                                       "bearerAuth":  [
+
+                                                                                                      ]
+                                                                                   }
+                                                                               ]
+                                                              }
+                                                },
+                  "/api/expenses":  {
+                                        "get":  {
+                                                    "tags":  [
+                                                                 "Expenses"
+                                                             ],
+                                                    "summary":  "List all expenses",
+                                                    "responses":  {
+                                                                      "200":  {
+                                                                                  "description":  "List of expenses"
+                                                                              },
+                                                                      "401":  {
+                                                                                  "$ref":  "#/components/responses/Unauthorized"
+                                                                              }
+                                                                  },
+                                                    "security":  [
+                                                                     {
+                                                                         "bearerAuth":  [
+
+                                                                                        ]
+                                                                     }
+                                                                 ]
+                                                },
+                                        "post":  {
+                                                     "tags":  [
+                                                                  "Expenses"
+                                                              ],
+                                                     "summary":  "Log a new expense",
+                                                     "requestBody":  {
+                                                                         "required":  true,
+                                                                         "content":  {
+                                                                                         "application/json":  {
+                                                                                                                  "schema":  {
+                                                                                                                                 "type":  "object",
+                                                                                                                                 "required":  [
+                                                                                                                                                  "amount",
+                                                                                                                                                  "description",
+                                                                                                                                                  "category",
+                                                                                                                                                  "date"
+                                                                                                                                              ],
+                                                                                                                                 "properties":  {
+                                                                                                                                                    "amount":  {
+                                                                                                                                                                   "type":  "string"
+                                                                                                                                                               },
+                                                                                                                                                    "description":  {
+                                                                                                                                                                        "type":  "string"
+                                                                                                                                                                    },
+                                                                                                                                                    "category":  {
+                                                                                                                                                                     "type":  "string"
+                                                                                                                                                                 },
+                                                                                                                                                    "date":  {
+                                                                                                                                                                 "type":  "string",
+                                                                                                                                                                 "format":  "date-time"
+                                                                                                                                                             }
+                                                                                                                                                }
+                                                                                                                             }
+                                                                                                              }
+                                                                                     }
+                                                                     },
+                                                     "responses":  {
+                                                                       "201":  {
+                                                                                   "description":  "Expense created"
+                                                                               },
+                                                                       "401":  {
+                                                                                   "$ref":  "#/components/responses/Unauthorized"
+                                                                               }
+                                                                   },
+                                                     "security":  [
+                                                                      {
+                                                                          "bearerAuth":  [
+
+                                                                                         ]
+                                                                      }
+                                                                  ]
+                                                 }
+                                    },
+                  "/api/expenses/{id}":  {
+                                             "get":  {
+                                                         "tags":  [
+                                                                      "Expenses"
+                                                                  ],
+                                                         "summary":  "Get an expense by ID",
+                                                         "parameters":  [
+                                                                            {
+                                                                                "in":  "path",
+                                                                                "name":  "id",
+                                                                                "required":  true,
+                                                                                "schema":  {
+                                                                                               "type":  "integer"
+                                                                                           }
+                                                                            }
+                                                                        ],
+                                                         "responses":  {
+                                                                           "200":  {
+                                                                                       "description":  "Expense details"
+                                                                                   },
+                                                                           "401":  {
+                                                                                       "$ref":  "#/components/responses/Unauthorized"
+                                                                                   }
+                                                                       },
+                                                         "security":  [
+                                                                          {
+                                                                              "bearerAuth":  [
+
+                                                                                             ]
+                                                                          }
+                                                                      ]
+                                                     },
+                                             "put":  {
+                                                         "tags":  [
+                                                                      "Expenses"
+                                                                  ],
+                                                         "summary":  "Update an expense",
+                                                         "parameters":  [
+                                                                            {
+                                                                                "in":  "path",
+                                                                                "name":  "id",
+                                                                                "required":  true,
+                                                                                "schema":  {
+                                                                                               "type":  "integer"
+                                                                                           }
+                                                                            }
+                                                                        ],
+                                                         "responses":  {
+                                                                           "200":  {
+                                                                                       "description":  "Expense updated"
+                                                                                   },
+                                                                           "401":  {
+                                                                                       "$ref":  "#/components/responses/Unauthorized"
+                                                                                   }
+                                                                       },
+                                                         "security":  [
+                                                                          {
+                                                                              "bearerAuth":  [
+
+                                                                                             ]
+                                                                          }
+                                                                      ]
+                                                     },
+                                             "delete":  {
+                                                            "tags":  [
+                                                                         "Expenses"
+                                                                     ],
+                                                            "summary":  "Delete an expense",
+                                                            "parameters":  [
+                                                                               {
+                                                                                   "in":  "path",
+                                                                                   "name":  "id",
+                                                                                   "required":  true,
+                                                                                   "schema":  {
+                                                                                                  "type":  "integer"
+                                                                                              }
+                                                                               }
+                                                                           ],
+                                                            "responses":  {
+                                                                              "200":  {
+                                                                                          "description":  "Expense deleted"
+                                                                                      },
+                                                                              "401":  {
+                                                                                          "$ref":  "#/components/responses/Unauthorized"
+                                                                                      }
+                                                                          },
+                                                            "security":  [
+                                                                             {
+                                                                                 "bearerAuth":  [
+
+                                                                                                ]
+                                                                             }
+                                                                         ]
+                                                        }
+                                         },
+                  "/api/content":  {
+                                       "get":  {
+                                                   "tags":  [
+                                                                "Content"
+                                                            ],
+                                                   "summary":  "List content (manuals and quotes)",
+                                                   "parameters":  [
+                                                                      {
+                                                                          "in":  "query",
+                                                                          "name":  "type",
+                                                                          "schema":  {
+                                                                                         "type":  "string",
+                                                                                         "enum":  [
+                                                                                                      "manual",
+                                                                                                      "quote"
+                                                                                                  ]
+                                                                                     }
+                                                                      }
+                                                                  ],
+                                                   "responses":  {
+                                                                     "200":  {
+                                                                                 "description":  "List of content items"
+                                                                             }
+                                                                 },
+                                                   "security":  [
+
+                                                                ]
+                                               },
+                                       "post":  {
+                                                    "tags":  [
+                                                                 "Content"
+                                                             ],
+                                                    "summary":  "Create content (manual or quote)",
+                                                    "requestBody":  {
+                                                                        "required":  true,
+                                                                        "content":  {
+                                                                                        "application/json":  {
+                                                                                                                 "schema":  {
+                                                                                                                                "type":  "object",
+                                                                                                                                "required":  [
+                                                                                                                                                 "type",
+                                                                                                                                                 "title",
+                                                                                                                                                 "body"
+                                                                                                                                             ],
+                                                                                                                                "properties":  {
+                                                                                                                                                   "type":  {
+                                                                                                                                                                "type":  "string",
+                                                                                                                                                                "enum":  [
+                                                                                                                                                                             "manual",
+                                                                                                                                                                             "quote"
+                                                                                                                                                                         ]
+                                                                                                                                                            },
+                                                                                                                                                   "title":  {
+                                                                                                                                                                 "type":  "string"
+                                                                                                                                                             },
+                                                                                                                                                   "body":  {
+                                                                                                                                                                "type":  "string"
+                                                                                                                                                            }
+                                                                                                                                               }
+                                                                                                                            }
+                                                                                                             }
+                                                                                    }
+                                                                    },
+                                                    "responses":  {
+                                                                      "201":  {
+                                                                                  "description":  "Content created"
+                                                                              },
+                                                                      "401":  {
+                                                                                  "$ref":  "#/components/responses/Unauthorized"
+                                                                              }
+                                                                  },
+                                                    "security":  [
+                                                                     {
+                                                                         "bearerAuth":  [
+
+                                                                                        ]
+                                                                     }
+                                                                 ]
+                                                }
+                                   },
+                  "/api/content/daily-quote":  {
+                                                   "get":  {
+                                                               "tags":  [
+                                                                            "Content"
+                                                                        ],
+                                                               "summary":  "Get today\u0027s daily quote",
+                                                               "responses":  {
+                                                                                 "200":  {
+                                                                                             "description":  "Daily quote"
+                                                                                         }
+                                                                             },
+                                                               "security":  [
+
+                                                                            ]
+                                                           }
+                                               },
+                  "/api/content/{id}":  {
+                                            "get":  {
+                                                        "tags":  [
+                                                                     "Content"
+                                                                 ],
+                                                        "summary":  "Get content by ID",
+                                                        "parameters":  [
+                                                                           {
+                                                                               "in":  "path",
+                                                                               "name":  "id",
+                                                                               "required":  true,
+                                                                               "schema":  {
+                                                                                              "type":  "integer"
+                                                                                          }
+                                                                           }
+                                                                       ],
+                                                        "responses":  {
+                                                                          "200":  {
+                                                                                      "description":  "Content details"
+                                                                                  }
+                                                                      },
+                                                        "security":  [
+
+                                                                     ]
+                                                    },
+                                            "put":  {
+                                                        "tags":  [
+                                                                     "Content"
+                                                                 ],
+                                                        "summary":  "Update content",
+                                                        "parameters":  [
+                                                                           {
+                                                                               "in":  "path",
+                                                                               "name":  "id",
+                                                                               "required":  true,
+                                                                               "schema":  {
+                                                                                              "type":  "integer"
+                                                                                          }
+                                                                           }
+                                                                       ],
+                                                        "responses":  {
+                                                                          "200":  {
+                                                                                      "description":  "Content updated"
+                                                                                  },
+                                                                          "401":  {
+                                                                                      "$ref":  "#/components/responses/Unauthorized"
+                                                                                  }
+                                                                      },
+                                                        "security":  [
+                                                                         {
+                                                                             "bearerAuth":  [
+
+                                                                                            ]
+                                                                         }
+                                                                     ]
+                                                    },
+                                            "delete":  {
+                                                           "tags":  [
+                                                                        "Content"
+                                                                    ],
+                                                           "summary":  "Delete content",
+                                                           "parameters":  [
+                                                                              {
+                                                                                  "in":  "path",
+                                                                                  "name":  "id",
+                                                                                  "required":  true,
+                                                                                  "schema":  {
+                                                                                                 "type":  "integer"
+                                                                                             }
+                                                                              }
+                                                                          ],
+                                                           "responses":  {
+                                                                             "200":  {
+                                                                                         "description":  "Content deleted"
+                                                                                     },
+                                                                             "401":  {
+                                                                                         "$ref":  "#/components/responses/Unauthorized"
+                                                                                     }
+                                                                         },
+                                                           "security":  [
+                                                                            {
+                                                                                "bearerAuth":  [
+
+                                                                                               ]
+                                                                            }
+                                                                        ]
+                                                       }
+                                        },
+                  "/api/auth/owner/login":  {
+                                                "post":  {
+                                                             "tags":  [
+                                                                          "Auth"
+                                                                      ],
+                                                             "summary":  "Owner login (returns JWT)",
+                                                             "requestBody":  {
+                                                                                 "required":  true,
+                                                                                 "content":  {
+                                                                                                 "application/json":  {
+                                                                                                                          "schema":  {
+                                                                                                                                         "type":  "object",
+                                                                                                                                         "required":  [
+                                                                                                                                                          "email",
+                                                                                                                                                          "password"
+                                                                                                                                                      ],
+                                                                                                                                         "properties":  {
+                                                                                                                                                            "email":  {
+                                                                                                                                                                          "type":  "string"
+                                                                                                                                                                      },
+                                                                                                                                                            "password":  {
+                                                                                                                                                                             "type":  "string"
+                                                                                                                                                                         }
+                                                                                                                                                        }
+                                                                                                                                     }
+                                                                                                                      }
+                                                                                             }
+                                                                             },
+                                                             "responses":  {
+                                                                               "200":  {
+                                                                                           "description":  "JWT token for dashboard access",
+                                                                                           "content":  {
+                                                                                                           "application/json":  {
+                                                                                                                                    "schema":  {
+                                                                                                                                                   "allOf":  [
+                                                                                                                                                                 {
+                                                                                                                                                                     "$ref":  "#/components/schemas/SuccessResponse"
+                                                                                                                                                                 }
+                                                                                                                                                             ]
+                                                                                                                                               }
+                                                                                                                                }
+                                                                                                       }
+                                                                                       },
+                                                                               "401":  {
+                                                                                           "$ref":  "#/components/responses/Unauthorized"
+                                                                                       }
+                                                                           },
+                                                             "security":  [
+
+                                                                          ]
+                                                         }
+                                            },
+                  "/api/auth/member/login":  {
+                                                 "post":  {
+                                                              "tags":  [
+                                                                           "Auth"
+                                                                       ],
+                                                              "summary":  "Member login by phone (returns JWT)",
+                                                              "requestBody":  {
+                                                                                  "required":  true,
+                                                                                  "content":  {
+                                                                                                  "application/json":  {
+                                                                                                                           "schema":  {
+                                                                                                                                          "type":  "object",
+                                                                                                                                          "required":  [
+                                                                                                                                                           "phone"
+                                                                                                                                                       ],
+                                                                                                                                          "properties":  {
+                                                                                                                                                             "phone":  {
+                                                                                                                                                                           "type":  "string"
+                                                                                                                                                                       }
+                                                                                                                                                         }
+                                                                                                                                      }
+                                                                                                                       }
+                                                                                              }
+                                                                              },
+                                                              "responses":  {
+                                                                                "200":  {
+                                                                                            "description":  "JWT token and member profile",
+                                                                                            "content":  {
+                                                                                                            "application/json":  {
+                                                                                                                                     "schema":  {
+                                                                                                                                                    "allOf":  [
+                                                                                                                                                                  {
+                                                                                                                                                                      "$ref":  "#/components/schemas/SuccessResponse"
+                                                                                                                                                                  }
+                                                                                                                                                              ]
+                                                                                                                                                }
+                                                                                                                                 }
+                                                                                                        }
+                                                                                        },
+                                                                                "403":  {
+                                                                                            "$ref":  "#/components/responses/Forbidden"
+                                                                                        },
+                                                                                "404":  {
+                                                                                            "$ref":  "#/components/responses/NotFound"
+                                                                                        }
+                                                                            },
+                                                              "security":  [
+
+                                                                           ]
+                                                          }
+                                             }
+              },
+    "tags":  [
+
+             ]
+}

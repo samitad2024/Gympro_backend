@@ -1,0 +1,107 @@
+{
+  "Plan": {
+    "id": 1,
+    "name": "Monthly Plan",
+    "durationDays": 30,
+    "price": "500.00",
+    "createdAt": "2026-07-17T00:00:00.000Z"
+  },
+  "Member": {
+    "id": 1,
+    "name": "John Doe",
+    "phone": "0912345678",
+    "planId": 1,
+    "status": "pending",
+    "startDate": null,
+    "endDate": null,
+    "fcmToken": null,
+    "registeredAt": "2026-07-17T00:00:00.000Z"
+  },
+  "MemberActive": {
+    "id": 1,
+    "name": "John Doe",
+    "phone": "0912345678",
+    "planId": 1,
+    "status": "active",
+    "startDate": "2026-07-17T00:00:00.000Z",
+    "endDate": "2026-08-16T00:00:00.000Z",
+    "fcmToken": null,
+    "registeredAt": "2026-07-17T00:00:00.000Z"
+  },
+  "Payment": {
+    "id": 1,
+    "memberId": 1,
+    "amount": "500.00",
+    "methodLabel": "Cash",
+    "date": "2026-07-17T00:00:00.000Z",
+    "createdAt": "2026-07-17T00:00:00.000Z"
+  },
+  "ConfirmMemberResponse": {
+    "member": {
+      "id": 1,
+      "status": "active",
+      "startDate": "2026-07-17T00:00:00.000Z",
+      "endDate": "2026-08-16T00:00:00.000Z"
+    },
+    "payment": {
+      "id": 1,
+      "memberId": 1,
+      "amount": "500.00",
+      "methodLabel": "Cash"
+    }
+  },
+  "Expense": {
+    "id": 1,
+    "amount": "250.00",
+    "description": "Equipment maintenance",
+    "category": "Maintenance",
+    "date": "2026-07-17T00:00:00.000Z",
+    "createdAt": "2026-07-17T00:00:00.000Z"
+  },
+  "Service": {
+    "id": 1,
+    "name": "Personal Training",
+    "description": "1-on-1 coaching",
+    "isActive": true,
+    "createdAt": "2026-07-17T00:00:00.000Z"
+  },
+  "Content": {
+    "id": 1,
+    "type": "manual",
+    "title": "Chest Workout",
+    "body": "Bench press 3x10",
+    "createdAt": "2026-07-17T00:00:00.000Z"
+  },
+  "Notification": {
+    "id": 1,
+    "title": "Weekly Reminder",
+    "body": "Don't skip leg day!",
+    "scheduledAt": "2026-07-18T09:00:00.000Z",
+    "sentAt": null,
+    "isActive": true,
+    "createdAt": "2026-07-17T00:00:00.000Z"
+  },
+  "MonthlyReport": {
+    "month": "2026-07",
+    "totalIncome": "5000.00",
+    "totalExpenses": "1200.00",
+    "netProfit": "3800.00",
+    "paymentCount": 10,
+    "expenseCount": 4
+  },
+  "LoginResponse": {
+    "success": true,
+    "message": "Copy data.token → Swagger Authorize...",
+    "data": {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    }
+  },
+  "ErrorResponse": {
+    "success": false,
+    "message": "Validation failed",
+    "errors": {
+      "fieldErrors": {},
+      "formErrors": []
+    }
+  }
+}

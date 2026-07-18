@@ -1,0 +1,484 @@
+{
+  "project": "GymPro Admin Dashboard",
+  "backendBaseUrl": "http://localhost:4000",
+  "openApiUrl": "http://localhost:4000/api-docs.json",
+  "swaggerUiUrl": "http://localhost:4000/api-docs",
+  "responseEnvelope": {
+    "success": {
+      "success": true,
+      "message": "string | null",
+      "data": "T"
+    },
+    "error": {
+      "success": false,
+      "message": "string",
+      "errors": "object | null"
+    }
+  },
+  "authentication": {
+    "type": "Bearer JWT",
+    "loginEndpoint": {
+      "method": "POST",
+      "path": "/api/auth/owner/login",
+      "authRequired": false,
+      "body": {
+        "email": "admin@gmail.com",
+        "password": "admin123"
+      },
+      "responseData": {
+        "token": "eyJhbGciOiJIUzI1NiIs..."
+      },
+      "usage": "Store data.token. Send header: Authorization: Bearer <token> on all protected routes."
+    },
+    "publicRoutes": [
+      "POST /api/auth/owner/login",
+      "POST /api/auth/member/login",
+      "POST /api/members",
+      "GET /api/plans",
+      "GET /api/plans/:id",
+      "GET /api/services",
+      "GET /api/services/:id",
+      "GET /api/content",
+      "GET /api/content/daily-quote",
+      "GET /api/content/:id"
+    ],
+    "protectedRoutes": "All other /api/* routes require owner JWT"
+  },
+  "endpoints": [
+    {
+      "group": "Auth",
+      "routes": [
+        {
+          "method": "POST",
+          "path": "/api/auth/owner/login",
+          "summary": "Owner login for dashboard",
+          "auth": false,
+          "body": { "email": "string", "password": "string" },
+          "responseData": { "token": "string" }
+        }
+      ]
+    },
+    {
+      "group": "Plans",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/api/plans",
+          "summary": "List all membership plans",
+          "auth": false,
+          "responseData": "Plan[]"
+        },
+        {
+          "method": "GET",
+          "path": "/api/plans/:id",
+          "summary": "Get plan by ID",
+          "auth": false,
+          "responseData": "Plan"
+        },
+        {
+          "method": "POST",
+          "path": "/api/plans",
+          "summary": "Create plan",
+          "auth": true,
+          "body": { "name": "string", "durationDays": "number", "price": "string (e.g. 500.00)" },
+          "responseData": "Plan",
+          "status": 201
+        },
+        {
+          "method": "PUT",
+          "path": "/api/plans/:id",
+          "summary": "Update plan",
+          "auth": true,
+          "body": { "name?": "string", "durationDays?": "number", "price?": "string" },
+          "responseData": "Plan"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/plans/:id",
+          "summary": "Delete plan (blocked if members assigned)",
+          "auth": true,
+          "responseData": "Plan"
+        }
+      ]
+    },
+    {
+      "group": "Members",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/api/members",
+          "summary": "List members",
+          "auth": true,
+          "query": { "status?": "pending | active | expired" },
+          "responseData": "Member[]"
+        },
+        {
+          "method": "GET",
+          "path": "/api/members/pending",
+          "summary": "Pending members queue (for payment confirmation)",
+          "auth": true,
+          "responseData": "Member[]"
+        },
+        {
+          "method": "GET",
+          "path": "/api/members/:id",
+          "summary": "Get member by ID",
+          "auth": true,
+          "responseData": "Member"
+        },
+        {
+          "method": "POST",
+          "path": "/api/members",
+          "summary": "Register member (status=pending) — public for mobile",
+          "auth": false,
+          "body": { "name": "string", "phone": "string", "planId": "number", "fcmToken?": "string" },
+          "responseData": "Member",
+          "status": 201
+        },
+        {
+          "method": "PUT",
+          "path": "/api/members/:id",
+          "summary": "Update member",
+          "auth": true,
+          "body": { "name?": "string", "phone?": "string", "planId?": "number", "fcmToken?": "string" },
+          "responseData": "Member"
+        },
+        {
+          "method": "PATCH",
+          "path": "/api/members/:id/confirm",
+          "summary": "Confirm payment → activate member + create payment",
+          "auth": true,
+          "body": { "amount": "string (e.g. 500.00)", "methodLabel": "string (e.g. Cash)" },
+          "responseData": { "member": "Member", "payment": "Payment" }
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/members/:id",
+          "summary": "Delete member",
+          "auth": true,
+          "responseData": "Member"
+        }
+      ]
+    },
+    {
+      "group": "Payments",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/api/payments",
+          "summary": "List payments",
+          "auth": true,
+          "query": { "memberId?": "number" },
+          "responseData": "Payment[]"
+        },
+        {
+          "method": "GET",
+          "path": "/api/payments/:id",
+          "summary": "Get payment",
+          "auth": true,
+          "responseData": "Payment"
+        },
+        {
+          "method": "POST",
+          "path": "/api/payments",
+          "summary": "Manual payment for active member",
+          "auth": true,
+          "body": { "memberId": "number", "amount": "string", "methodLabel": "string", "date?": "ISO datetime" },
+          "responseData": "Payment",
+          "status": 201
+        }
+      ]
+    },
+    {
+      "group": "Expenses",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/api/expenses",
+          "summary": "List expenses",
+          "auth": true,
+          "responseData": "Expense[]"
+        },
+        {
+          "method": "GET",
+          "path": "/api/expenses/:id",
+          "summary": "Get expense",
+          "auth": true,
+          "responseData": "Expense"
+        },
+        {
+          "method": "POST",
+          "path": "/api/expenses",
+          "summary": "Create expense",
+          "auth": true,
+          "body": { "amount": "string", "description": "string", "category": "string", "date": "ISO datetime" },
+          "responseData": "Expense",
+          "status": 201
+        },
+        {
+          "method": "PUT",
+          "path": "/api/expenses/:id",
+          "summary": "Update expense",
+          "auth": true,
+          "body": { "amount?": "string", "description?": "string", "category?": "string", "date?": "ISO datetime" },
+          "responseData": "Expense"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/expenses/:id",
+          "summary": "Delete expense",
+          "auth": true,
+          "responseData": "Expense"
+        }
+      ]
+    },
+    {
+      "group": "Services",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/api/services",
+          "summary": "List services",
+          "auth": false,
+          "query": { "activeOnly?": "boolean" },
+          "responseData": "Service[]"
+        },
+        {
+          "method": "GET",
+          "path": "/api/services/:id",
+          "summary": "Get service",
+          "auth": false,
+          "responseData": "Service"
+        },
+        {
+          "method": "POST",
+          "path": "/api/services",
+          "summary": "Create service",
+          "auth": true,
+          "body": { "name": "string", "description?": "string", "isActive?": "boolean" },
+          "responseData": "Service",
+          "status": 201
+        },
+        {
+          "method": "PUT",
+          "path": "/api/services/:id",
+          "summary": "Update service",
+          "auth": true,
+          "body": { "name?": "string", "description?": "string", "isActive?": "boolean" },
+          "responseData": "Service"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/services/:id",
+          "summary": "Delete service",
+          "auth": true,
+          "responseData": "Service"
+        }
+      ]
+    },
+    {
+      "group": "Content",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/api/content",
+          "summary": "List content",
+          "auth": false,
+          "query": { "type?": "manual | quote" },
+          "responseData": "Content[]"
+        },
+        {
+          "method": "GET",
+          "path": "/api/content/daily-quote",
+          "summary": "Today's quote",
+          "auth": false,
+          "responseData": "Content"
+        },
+        {
+          "method": "GET",
+          "path": "/api/content/:id",
+          "summary": "Get content",
+          "auth": false,
+          "responseData": "Content"
+        },
+        {
+          "method": "POST",
+          "path": "/api/content",
+          "summary": "Create manual or quote",
+          "auth": true,
+          "body": { "type": "manual | quote", "title": "string", "body": "string" },
+          "responseData": "Content",
+          "status": 201
+        },
+        {
+          "method": "PUT",
+          "path": "/api/content/:id",
+          "summary": "Update content",
+          "auth": true,
+          "body": { "type?": "manual | quote", "title?": "string", "body?": "string" },
+          "responseData": "Content"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/content/:id",
+          "summary": "Delete content",
+          "auth": true,
+          "responseData": "Content"
+        }
+      ]
+    },
+    {
+      "group": "Notifications",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/api/notifications",
+          "summary": "List scheduled notifications",
+          "auth": true,
+          "responseData": "Notification[]"
+        },
+        {
+          "method": "GET",
+          "path": "/api/notifications/:id",
+          "summary": "Get notification",
+          "auth": true,
+          "responseData": "Notification"
+        },
+        {
+          "method": "POST",
+          "path": "/api/notifications",
+          "summary": "Schedule notification",
+          "auth": true,
+          "body": { "title": "string", "body": "string", "scheduledAt": "ISO datetime", "isActive?": "boolean" },
+          "responseData": "Notification",
+          "status": 201
+        },
+        {
+          "method": "PUT",
+          "path": "/api/notifications/:id",
+          "summary": "Update notification",
+          "auth": true,
+          "body": { "title?": "string", "body?": "string", "scheduledAt?": "ISO datetime", "isActive?": "boolean" },
+          "responseData": "Notification"
+        },
+        {
+          "method": "DELETE",
+          "path": "/api/notifications/:id",
+          "summary": "Delete notification",
+          "auth": true,
+          "responseData": "Notification"
+        }
+      ]
+    },
+    {
+      "group": "Reports",
+      "routes": [
+        {
+          "method": "GET",
+          "path": "/api/reports/monthly",
+          "summary": "Monthly income/expense report",
+          "auth": true,
+          "query": { "month": "YYYY-MM (required, e.g. 2026-07)" },
+          "responseData": {
+            "month": "string",
+            "totalIncome": "string",
+            "totalExpenses": "string",
+            "netProfit": "string",
+            "paymentCount": "number",
+            "expenseCount": "number"
+          }
+        }
+      ]
+    }
+  ],
+  "entities": {
+    "Plan": {
+      "id": "number",
+      "name": "string",
+      "durationDays": "number",
+      "price": "string",
+      "createdAt": "ISO datetime"
+    },
+    "Member": {
+      "id": "number",
+      "name": "string",
+      "phone": "string",
+      "planId": "number | null",
+      "status": "pending | active | expired",
+      "startDate": "ISO datetime | null",
+      "endDate": "ISO datetime | null",
+      "fcmToken": "string | null",
+      "registeredAt": "ISO datetime"
+    },
+    "Payment": {
+      "id": "number",
+      "memberId": "number",
+      "amount": "string",
+      "methodLabel": "string",
+      "date": "ISO datetime",
+      "createdAt": "ISO datetime"
+    },
+    "Expense": {
+      "id": "number",
+      "amount": "string",
+      "description": "string",
+      "category": "string",
+      "date": "ISO datetime",
+      "createdAt": "ISO datetime"
+    },
+    "Service": {
+      "id": "number",
+      "name": "string",
+      "description": "string | null",
+      "isActive": "boolean",
+      "createdAt": "ISO datetime"
+    },
+    "Content": {
+      "id": "number",
+      "type": "manual | quote",
+      "title": "string",
+      "body": "string",
+      "createdAt": "ISO datetime"
+    },
+    "Notification": {
+      "id": "number",
+      "title": "string",
+      "body": "string",
+      "scheduledAt": "ISO datetime",
+      "sentAt": "ISO datetime | null",
+      "isActive": "boolean",
+      "createdAt": "ISO datetime"
+    }
+  },
+  "httpStatusCodes": {
+    "200": "Success",
+    "201": "Created",
+    "400": "Validation error — show message and errors",
+    "401": "Unauthorized — redirect to login",
+    "403": "Forbidden",
+    "404": "Not found",
+    "409": "Conflict (duplicate phone, plan in use)"
+  },
+  "coreUserFlows": [
+    {
+      "name": "Login",
+      "steps": ["POST /api/auth/owner/login", "Save token to localStorage", "Attach Bearer header on all API calls"]
+    },
+    {
+      "name": "Pending member → Active",
+      "steps": [
+        "GET /api/members/pending — show queue",
+        "PATCH /api/members/:id/confirm with amount + methodLabel",
+        "Member status becomes active, payment auto-created"
+      ]
+    },
+    {
+      "name": "Dashboard home",
+      "steps": [
+        "GET /api/reports/monthly?month=current YYYY-MM",
+        "GET /api/members?status=active — member count",
+        "GET /api/members/pending — pending count"
+      ]
+    }
+  ]
+}

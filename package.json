@@ -1,7 +1,7 @@
 {
   "name": "gympro_backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "GymPro single-gym management REST API — members, plans, payments, expenses, reports",
   "main": "index.js",
   "scripts": {
     "dev": "ts-node-dev -r tsconfig-paths/register --respawn --transpile-only src/index.ts",
